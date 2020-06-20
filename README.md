@@ -7,10 +7,18 @@ resulting AccessToken to make an HTTP GET request against GCS using the
 Example usage:
 
 ```
-cargo run -- \
-  --creds my-service-account.json \
+cargo run --example=write -- \
+  --creds=my-service-account.json \
   --bucket=my-example-bucket \
-  --object=foo/bar/glowing_man.png
-    > glowing_man.png
+  --object=foo/bar/glowing_man.png \
+  glowing_man.png
 ```
 
+
+```
+cargo run --example=read -- \
+  --creds=my-service-account.json \
+  --bucket=my-example-bucket \
+  --object=foo/bar/glowing_man.png \
+    > glowing_man.png
+```
