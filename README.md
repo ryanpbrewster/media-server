@@ -22,3 +22,9 @@ cargo run --example=read -- \
   --object=foo/bar/glowing_man.png \
     > glowing_man.png
 ```
+
+```
+cargo run --example=resize -- \
+  --input=my-image.png
+  --output=my-thumbnail.png
+```
