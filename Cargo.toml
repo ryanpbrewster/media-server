@@ -1,0 +1,12 @@
+[package]
+name = "media-server"
+version = "0.1.0"
+authors = ["Ryan P. Brewster <RyanPBrewster@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+dirs = "2.0.2"
+yup-oauth2 = "4.1.0"
+reqwest = "0.10.4"
+structopt = "0.3.12"
+tokio = { version = "0.2", features = ["full"] }
