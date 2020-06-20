@@ -28,3 +28,9 @@ cargo run --example=resize -- \
   --input=my-image.png
   --output=my-thumbnail.png
 ```
+
+```
+cargo run --example=gif -- \
+  --input my-animation.gif \
+  --output my-smaller-animation.gif
+```
