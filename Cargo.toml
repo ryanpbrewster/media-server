@@ -5,6 +5,7 @@ authors = ["Ryan P. Brewster <RyanPBrewster@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+blurhash = "0.1"
 bytes = "0.5"
 dirs = "2.0.2"
 env_logger = "0.7"

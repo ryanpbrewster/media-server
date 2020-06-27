@@ -116,6 +116,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "blurhash"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8671e4c8bf59f8784aa27fe4c8e152f2a45dfeb91a52d114e5d104a451494bb4"
+
+[[package]]
 name = "buf_redux"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -868,6 +874,7 @@ checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 name = "media-server"
 version = "0.1.0"
 dependencies = [
+ "blurhash",
  "bytes",
  "dirs",
  "env_logger",

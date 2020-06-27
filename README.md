@@ -34,3 +34,9 @@ cargo run --example=gif -- \
   --input my-animation.gif \
   --output my-smaller-animation.gif
 ```
+
+```
+cargo run --example=blur -- \
+  --input=my-image.png \
+  --output=my-blurry-image.png
+```
