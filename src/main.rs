@@ -1,9 +1,11 @@
 use bytes::Bytes;
+use log::info;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use structopt::StructOpt;
+use warp::http::StatusCode;
 use warp::Filter;
 use yup_oauth2::AccessToken;
 
@@ -53,7 +55,13 @@ async fn get_object(
     object_name: String,
     client: Arc<GcsClient>,
 ) -> Result<impl warp::Reply, Infallible> {
-    Ok(client.fetch_object(&object_name).await)
+    match client.fetch_object(&object_name).await {
+        Ok(obj) => Ok(warp::reply::with_status(obj.to_vec(), StatusCode::OK)),
+        Err(err) => Ok(warp::reply::with_status(
+            err.into_bytes(),
+            StatusCode::NOT_FOUND,
+        )),
+    }
 }
 async fn create_object(
     bytes: Bytes,
@@ -79,8 +87,11 @@ struct GcsClient {
 }
 
 impl GcsClient {
-    async fn fetch_object(&self, name: &str) -> String {
-        let url = format!("https://storage.googleapis.com/{}/{}", self.bucket, name);
+    async fn fetch_object(&self, name: &str) -> Result<Bytes, String> {
+        let url = format!(
+            "https://storage.googleapis.com/storage/v1/b/{}/o/{}?alt=media",
+            self.bucket, name
+        );
         let req = self
             .client
             .get(&url)
@@ -88,24 +99,19 @@ impl GcsClient {
             .build()
             .unwrap();
 
-        let resp = {
-            let start = Instant::now();
-            let resp = self
-                .client
-                .execute(req)
-                .await
-                .unwrap()
-                .bytes()
-                .await
-                .unwrap();
-            eprintln!(
+        let start = Instant::now();
+        let resp = self.client.execute(req).await.unwrap();
+        if resp.status().is_success() {
+            let bytes = resp.bytes().await.unwrap();
+            info!(
                 "fetched {} bytes in {}ms",
-                resp.len(),
+                bytes.len(),
                 start.elapsed().as_millis()
             );
-            resp
-        };
-        format!("{} bytes", resp.len())
+            Ok(bytes)
+        } else {
+            Err(resp.text().await.unwrap())
+        }
     }
 
     async fn create_object(&self, name: &str, bytes: Bytes) {
@@ -124,8 +130,8 @@ impl GcsClient {
 
         let start = Instant::now();
         let resp = self.client.execute(req).await.unwrap();
-        eprintln!("{:?}", resp.status());
-        eprintln!(
+        info!("{:?}", resp.status());
+        info!(
             "uploaded {} bytes in {}ms",
             size,
             start.elapsed().as_millis()
