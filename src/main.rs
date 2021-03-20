@@ -47,7 +47,8 @@ async fn main() {
         get_object.or(create_object)
     };
 
-    let routes = hello.or(warp::path("v0").and(v0));
+    let fallback = warp::get().map(|| "No handler here, try /v0/o/{objectId}\n");
+    let routes = hello.or(warp::path("v0").and(v0)).or(fallback);
     warp::serve(routes).run(([127, 0, 0, 1], 9000)).await;
 }
 
