@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use media_server::gcs::GcsClient;
+use media_server::StorageClient;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
