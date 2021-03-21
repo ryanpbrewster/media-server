@@ -1,13 +1,11 @@
 use bytes::Bytes;
-use log::info;
+use media_server::GcsClient;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 use structopt::StructOpt;
 use warp::http::StatusCode;
 use warp::Filter;
-use yup_oauth2::AccessToken;
 
 #[tokio::main]
 async fn main() {
@@ -24,11 +22,7 @@ async fn main() {
             .unwrap();
         let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
         let token = auth.token(scopes).await.unwrap();
-        Arc::new(GcsClient {
-            token,
-            bucket: opts.bucket,
-            client: reqwest::Client::new(),
-        })
+        Arc::new(GcsClient::new(token, opts.bucket))
     };
 
     let hello = warp::get().and(warp::path::end()).map(|| "ok");
@@ -79,63 +73,4 @@ struct Opts {
     creds: PathBuf,
     #[structopt(long)]
     bucket: String,
-}
-
-struct GcsClient {
-    token: AccessToken,
-    bucket: String,
-    client: reqwest::Client,
-}
-
-impl GcsClient {
-    async fn fetch_object(&self, name: &str) -> Result<Bytes, String> {
-        let url = format!(
-            "https://storage.googleapis.com/storage/v1/b/{}/o/{}?alt=media",
-            self.bucket, name
-        );
-        let req = self
-            .client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", self.token.as_str()))
-            .build()
-            .unwrap();
-
-        let start = Instant::now();
-        let resp = self.client.execute(req).await.unwrap();
-        if resp.status().is_success() {
-            let bytes = resp.bytes().await.unwrap();
-            info!(
-                "fetched {} bytes in {}ms",
-                bytes.len(),
-                start.elapsed().as_millis()
-            );
-            Ok(bytes)
-        } else {
-            Err(resp.text().await.unwrap())
-        }
-    }
-
-    async fn create_object(&self, name: &str, bytes: Bytes) {
-        let url = format!(
-            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?name={}",
-            self.bucket, name,
-        );
-        let size = bytes.len();
-        let req = self
-            .client
-            .post(&url)
-            .body(bytes)
-            .header("Authorization", format!("Bearer {}", self.token.as_str()))
-            .build()
-            .unwrap();
-
-        let start = Instant::now();
-        let resp = self.client.execute(req).await.unwrap();
-        info!("{:?}", resp.status());
-        info!(
-            "uploaded {} bytes in {}ms",
-            size,
-            start.elapsed().as_millis()
-        );
-    }
 }
