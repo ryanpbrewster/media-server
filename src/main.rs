@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use log::info;
-use media_server::StorageClient;
 use media_server::{gcs::GcsClient, sqlite::SqliteClient};
+use media_server::{metadata::Metadata, StorageClient};
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -62,7 +62,8 @@ async fn create_object(
     bytes: Bytes,
     client: Arc<dyn StorageClient>,
 ) -> Result<impl warp::Reply, Infallible> {
-    info!("Content-Type = {:?}", media_type);
+    let md = Metadata::new(bytes.as_ref(), media_type);
+    info!("{:?}", md);
     let name = format!("u64-{}", rand::random::<u64>());
     match client.create_object(&name, bytes).await {
         Ok(_) => Ok(warp::reply::with_status(name, StatusCode::OK)),
