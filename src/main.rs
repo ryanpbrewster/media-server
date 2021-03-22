@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use log::info;
 use media_server::StorageClient;
 use media_server::{gcs::GcsClient, sqlite::SqliteClient};
 use std::convert::Infallible;
@@ -34,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .and_then(get_object);
         let create_object = warp::path("o")
             .and(warp::post())
+            .and(warp::header::optional::<String>("content-type"))
             .and(warp::body::bytes())
             .and(warp::any().map(move || client.clone()))
             .and_then(create_object);
@@ -60,9 +62,11 @@ async fn get_object(
     }
 }
 async fn create_object(
+    media_type: Option<String>,
     bytes: Bytes,
     client: Arc<dyn StorageClient>,
 ) -> Result<impl warp::Reply, Infallible> {
+    info!("Content-Type = {:?}", media_type);
     let name = format!("u64-{}", rand::random::<u64>());
     match client.create_object(&name, bytes).await {
         Ok(_) => Ok(warp::reply::with_status(name, StatusCode::OK)),

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 pub mod error;
 pub mod gcs;
+pub mod metadata;
 pub mod sqlite;
 
 use crate::error::Error;
