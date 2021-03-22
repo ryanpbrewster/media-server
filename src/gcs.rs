@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use log::info;
 use std::time::Instant;
-use yup_oauth2::AccessToken;
+use yup_oauth2::{AccessToken, ServiceAccountAuthenticator, ServiceAccountKey};
 
 pub struct GcsClient {
     token: AccessToken,
@@ -11,12 +11,15 @@ pub struct GcsClient {
     client: reqwest::Client,
 }
 impl GcsClient {
-    pub fn new(token: AccessToken, bucket: String) -> GcsClient {
-        GcsClient {
+    pub async fn new(creds: ServiceAccountKey, bucket: String) -> Result<GcsClient, Error> {
+        let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
+        let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
+        let token = auth.token(scopes).await?;
+        Ok(GcsClient {
             token,
             bucket,
             client: reqwest::Client::new(),
-        }
+        })
     }
 }
 

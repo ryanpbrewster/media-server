@@ -8,7 +8,6 @@ use std::sync::Arc;
 use structopt::StructOpt;
 use warp::http::StatusCode;
 use warp::Filter;
-use yup_oauth2::ServiceAccountAuthenticator;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,10 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client: Arc<dyn StorageClient> = match opts.storage {
         Storage::Gcs { creds, bucket } => {
             let creds = yup_oauth2::read_service_account_key(creds).await?;
-            let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
-            let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
-            let token = auth.token(scopes).await?;
-            Arc::new(GcsClient::new(token, bucket))
+            Arc::new(GcsClient::new(creds, bucket).await?)
         }
         Storage::Sqlite { file } => Arc::new(SqliteClient::new(file).unwrap()),
     };
