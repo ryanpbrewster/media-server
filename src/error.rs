@@ -1,6 +1,7 @@
 use reqwest::StatusCode;
 use serde::{ser::SerializeStruct, Serialize};
 
+#[derive(Debug)]
 pub enum Error {
     Application {
         status_code: StatusCode,

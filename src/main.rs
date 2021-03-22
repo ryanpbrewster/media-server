@@ -1,6 +1,6 @@
 use bytes::Bytes;
-use media_server::gcs::GcsClient;
 use media_server::StorageClient;
+use media_server::{gcs::GcsClient, sqlite::SqliteClient};
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -14,17 +14,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let opts = Opts::from_args();
-    let client = {
-        let creds = yup_oauth2::read_service_account_key(opts.creds).await?;
-        let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
-        let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
-        let token = auth.token(scopes).await?;
-        Arc::new(GcsClient::new(token, opts.bucket))
+    let client: Arc<dyn StorageClient> = match opts.storage {
+        Storage::Gcs { creds, bucket } => {
+            let creds = yup_oauth2::read_service_account_key(creds).await?;
+            let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
+            let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
+            let token = auth.token(scopes).await?;
+            Arc::new(GcsClient::new(token, bucket))
+        }
+        Storage::Sqlite { file } => Arc::new(SqliteClient::new(file).unwrap()),
     };
 
     let hello = warp::get().and(warp::path::end()).map(|| "ok");
     let v0 = {
-        let c1 = client.clone();
+        let c1: Arc<dyn StorageClient> = client.clone();
         let get_object = warp::path!("o" / String)
             .and(warp::get())
             .and(warp::any().map(move || c1.clone()))
@@ -46,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn get_object(
     object_name: String,
-    client: Arc<GcsClient>,
+    client: Arc<dyn StorageClient>,
 ) -> Result<impl warp::Reply, Infallible> {
     match client.fetch_object(&object_name).await {
         Ok(obj) => Ok(warp::reply::with_status(obj.to_vec(), StatusCode::OK)),
@@ -58,7 +61,7 @@ async fn get_object(
 }
 async fn create_object(
     bytes: Bytes,
-    client: Arc<GcsClient>,
+    client: Arc<dyn StorageClient>,
 ) -> Result<impl warp::Reply, Infallible> {
     let name = format!("u64-{}", rand::random::<u64>());
     match client.create_object(&name, bytes).await {
@@ -72,8 +75,22 @@ async fn create_object(
 
 #[derive(StructOpt)]
 struct Opts {
-    #[structopt(long, parse(from_os_str))]
-    creds: PathBuf,
-    #[structopt(long)]
-    bucket: String,
+    #[structopt(subcommand)]
+    storage: Storage,
+}
+
+#[derive(Debug, StructOpt)]
+enum Storage {
+    #[structopt(name = "gcs")]
+    Gcs {
+        #[structopt(long)]
+        creds: PathBuf,
+        #[structopt(long)]
+        bucket: String,
+    },
+    #[structopt(name = "sqlite")]
+    Sqlite {
+        #[structopt(long)]
+        file: PathBuf,
+    },
 }
